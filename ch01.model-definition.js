@@ -532,3 +532,136 @@ const sequelize = new Sequelize(db, user, pw, {
 const Person = sequelize.define('person', {/* attributes */}, {
   comment: "I'm "
 })
+
+
+// 導入
+
+// 可使用 import 方法將模型定義儲存在單個文件中。返回的對象與導入文件的功能中定義的完全相同。由於 Sequelize v1.5.0 的導入是被緩存的，所以當調用文件導入兩次或更多次時，不會遇到問題。
+
+// 在你的服务器文件中 - 例如 app.js
+const Project = sequelize.import(__dirname + "/models/project");
+// 也可
+// sequelize.import('project', (sequelize, DataTypes) => {
+//   return sequelize.define("project", {
+//     name: DataTypes.STRING,
+//     description: DataTypes.TEXT
+//   })
+// });
+
+
+// 樂觀鎖定
+
+// Sequelize 內置支持透過模型實例版本計數的樂觀鎖定
+// 默認禁用，可透過在特定模型定義或全局模型配置中將 version 屬性設置為 true 來啟用
+
+// 樂觀鎖定允許併發訪問模型紀錄以進行編輯，並防止衝突覆蓋數據。它透過檢查另一個進程是否已經讀取紀錄而進行更改，並在檢測道衝突時拋出一個 OptimisticLockError。
+
+
+// 資料庫同步
+
+// 當開始一個新的項目時，你還不會有一個資料庫結構，並且使用 Sequelize 你也不需要它。只需指定您的模型結構，並讓庫完成其餘操作。目前支持的是創建和刪除表：
+
+// 创建表:
+Project.sync()
+Task.sync()
+
+// 强制创建!
+Project.sync({force: true}) // 这将先丢弃表，然后重新创建它
+
+// 删除表:
+Project.drop()
+Task.drop()
+
+// 事件处理:
+Project.[sync|drop]().then(() => {
+  // 好吧...一切都很好！
+}).catch(error => {
+  // oooh，你输入了错误的数据库凭据？
+})
+
+// 同步和删除所有的表可能要写很多行，你也可以让Sequelize来为做这些：
+// 同步所有尚未在数据库中的模型
+sequelize.sync()
+
+// 强制同步所有模型
+sequelize.sync({force: true})
+
+// 删除所有表
+sequelize.drop()
+
+// 广播处理:
+sequelize.[sync|drop]().then(() => {
+  // woot woot
+}).catch(error => {
+  // whooops
+})
+
+// 因为 .sync({ force: true }) 是具有破坏性的操作，可以使用 match 参数作为附加的安全检查
+
+// match 參數可以通知 Sequelize，以便在同步之前匹配正則表達式與資料庫名稱：
+
+// 只有当数据库名称以 '_test' 结尾时，才会运行 .sync（）
+sequelize.sync({ force: true, match: /_test$/ });
+
+
+// 擴展模型
+// Sequelize 模型是 ES6 類。您可以輕鬆添加自定義實例或類級別的方法
+
+const User = sequelize.define('user', { firstname: Sequelize.STRING });
+
+// 添加一个类级别的方法
+User.classLevelMethod = function() {
+  return 'foo';
+};
+
+// 添加实例级别方法
+User.prototype.instanceLevelMethod = function() {
+  return 'bar';
+};
+
+// 你也可以訪問實例數據並生成虛擬的 getter：
+const User = sequelize.define('user', { firstname: Sequelize.STRING, lastname: Sequelize.STRING });
+
+User.prototype.getFullname = function() {
+  return [this.firstname, this.lastname].join(' ');
+};
+
+// 例子:
+User.build({ firstname: 'foo', lastname: 'bar' }).getFullname() // 'foo bar'
+
+
+// 索引
+// Sequelize 支持在 Model.sync() 或 sequelize.sync 中創建的模型定義中添加索引：
+sequelize.define('user', {}, {
+  indexes: [
+    // 在 email 上創建一個唯一索引
+    {
+      unique: true,
+      fields: ['email']
+    },
+
+    // 在使用 jsonb_path_ops 的 operator 数据上创建一个 gin 索引
+    {
+      fields: ['data'],
+      using: 'gin',
+      operator: 'jsonb_path_ops'
+    },
+
+    // 默認的索引名稱將是 [table]_[fields]
+    // 創建多行局部索引
+    {
+      name: 'public_by_author',
+      fields: ['author', 'status'],
+      where: {
+        status: 'public'
+      }
+    },
+
+    // 具有有序字段的BTREE索引
+    {
+      name: 'title_index',
+      method: 'BTREE',
+      fields: ['author', {attribute: 'title', collate: 'en_US', order: 'DESC', length: 5}]
+    }
+  ]
+})
