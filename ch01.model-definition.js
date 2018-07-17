@@ -573,11 +573,11 @@ Project.drop()
 Task.drop()
 
 // 事件处理:
-Project.[sync|drop]().then(() => {
-  // 好吧...一切都很好！
-}).catch(error => {
-  // oooh，你输入了错误的数据库凭据？
-})
+// Project.[sync|drop]().then(() => {
+//   // 好吧...一切都很好！
+// }).catch(error => {
+//   // oooh，你输入了错误的数据库凭据？
+// })
 
 // 同步和删除所有的表可能要写很多行，你也可以让Sequelize来为做这些：
 // 同步所有尚未在数据库中的模型
@@ -590,11 +590,11 @@ sequelize.sync({force: true})
 sequelize.drop()
 
 // 广播处理:
-sequelize.[sync|drop]().then(() => {
-  // woot woot
-}).catch(error => {
-  // whooops
-})
+// sequelize.[sync|drop]().then(() => {
+//   // woot woot
+// }).catch(error => {
+//   // whooops
+// })
 
 // 因为 .sync({ force: true }) 是具有破坏性的操作，可以使用 match 参数作为附加的安全检查
 

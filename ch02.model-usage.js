@@ -55,3 +55,46 @@ User
 
 
 // findAndCountAll - 在資料庫中搜索多個元素，返回資料和總計數
+
+// 這是一個方便的方法，它結合了 findAll 和 count (見下文)，當處理與分頁相關的查詢時，這是有用的，你想用 limit 和 offset 檢索資料，但也需要知道總數與查詢匹配的紀錄數：
+
+// 處理程序成功將始終接收具有兩個屬性的對象：
+// - count：一個整數，總數紀錄匹配 where 語句和關聯的其他過濾器
+// - rows：一個陣列對象，記錄在 limit 和 offset 範圍內匹配 where 語句和關聯的其他過濾器
+
+const Op = Sequelize.Op;
+
+Project.findAndCountAll({
+  where: {
+    title: {
+      [Op.like]: 'foo%'
+    }
+  },
+  offset: 10,
+  limit: 2
+})
+  .then(result => {
+    console.log(result.count);
+    console.log(result.rows);
+  });
+
+// 它支持 include。只有標記為 required 的 include 將被添加到計數部分：
+
+// 假設你想查找附有個人資料的所有用戶：
+User.findAndCountAll({
+  include: [
+    {model: Profile, required: true}
+  ],
+  limit: 3
+});
+
+// 因為 Profile 的 include 有 required 設置，這將導致內部連接，並且只有具有 Profile 的用戶將被計數。如果我們從 include 中刪除 required，那麼有和沒有 profile 的用戶都將被計數。在 include 中添加一個 where 語句會自動使它成為 required：
+User.findAndCountAll({
+  include: [
+    {model: Profile, where: {active: true}}
+  ],
+  limit: 3
+});
+// 上面的查詢只會對具有 active profile 的用戶進行計數，因為在將 where 語句添加 include 時，required 被隱式設置為 true。
+
+// 傳遞給 findAndCountAll 的 options 對象與 findAll 相同。
