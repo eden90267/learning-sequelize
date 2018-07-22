@@ -1,7 +1,9 @@
-// Querying
+// Querying - 查詢
 
 var Sequelize = require('sequelize');
 var sequelize = require('./models');
+
+const Op = Sequelize.Op;
 
 const Model = sequelize.define('model', {
   foo: Sequelize.STRING,
@@ -12,23 +14,29 @@ const Model = sequelize.define('model', {
 });
 
 Model.sync().then(() => {
+
+
+  // 屬性
   // 只選擇某個屬性
   Model.findAll({
     attributes: ['foo', 'bar']
   });
-  // 屬性可用嵌套數組來重命名
+
+  // 屬性可用嵌套陣列來重命名
   Model.findAll({
     attributes: ['foo', ['bar', 'baz']]
-  });
+  }); // SELECT foo, bar AS baz ...
+
   // 可用 sequelize.fn 來進行聚合
   Model.findAll({
     attributes: [
       [sequelize.fn('COUNT', sequelize.col('hats')), 'no_hats']
     ]
   }); // SELECT COUNT(hats) AS no_hats ...
+
   // 使用聚合功能，必須給他一個別名，以便能夠從模型中訪問：instance.get('no_hats')
 
-  // 有時，如果你只想添加聚合，則列出模型的所有屬性可能令人厭煩
+  // 有時，如果您只想添加聚合，則列出模型的所有屬性可能令人厭煩
   Model.findAll({
     attributes: ['id', 'foo', 'bar', 'baz', 'quz', [sequelize.fn('COUNT', sequelize.col('hats')), 'no_hats']]
   });
@@ -41,15 +49,17 @@ Model.sync().then(() => {
   });
 });
 
+
 // Where
+
 // findAll/find/updates/destroys 進行查詢，都可傳遞 where 對象來過濾查詢
 // where 通常用 attribute:value 鍵值對獲取一個對象，其中 value 可以是匹配等式的數據或其他運算符的鍵值對象
 // 也可以透過嵌套 or 和 and 運算符的集合來生成複雜的 AND/OR 條件
 
 // 基礎
-const Op = Sequelize.Op;
 
 const Post = sequelize.define('post', {authorId: Sequelize.INTEGER, status: Sequelize.ENUM('active', 'inactive')});
+
 Post.sync().then(async () => {
   const result = await Post.findAll({where: {authorId: 2}});
   console.log('post result: ', result);
@@ -89,8 +99,10 @@ Post.sync().then(async () => {
     where: sequelize.where(sequelize.fn('char_length', sequelize.col('status')), 6)
   }); // SELECT * FROM post WHERE char_length(status) = 6
 
+
   // 操作符
   // Sequelize 可用於創建更複雜比較的符號運算符：
+
   // [Op.and]: {a: 5}           // 且 (a = 5)
   // [Op.or]: [{a: 5}, {a: 6}]  // (a = 5 或 a = 6)
   // [Op.gt]: 6,                // id > 6
