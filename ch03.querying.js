@@ -173,6 +173,7 @@ Post.sync().then(async () => {
 
 });
 
+
 // 運算符別名 (v5 顯示棄用)
 // const operatorAliases = {
 //   $gt: Op.gt
@@ -182,15 +183,19 @@ Post.sync().then(async () => {
 // [Op.gt]: 6
 // $gt: 6
 
+
 // 運算符安全性
 // 默認情況下，Sequelize 將使用符號運算符。使用沒有別名的 Sequelize 可以提高安全性。沒有任何字符串別名將使得運算符可能被注入的可能性降到極低，但你應該始終正確驗證和清理用戶輸入。
 // 有些框架會自動將用戶輸入解析為 js 對象，如果你不能清理輸入內容，則可能會將具有字符串運算符的 Object 注入 Sequelize。
 
 // 為了更好安全性，強烈建議在代碼使用像 Op.and / Op.or 的符號運算符，而不是依賴任何字符串別名，如 $and/ $or 這種。你可透過設置 operatorsAliases 選項來限制應用程序需要的別名，請記住要清理用戶輸入，特別是當你直接將它們傳遞給 Sequelize 方法時。
-// const connection = new Sequelize(db, user, pass, {operatorsAliases: false})
-// const connection2 = new Sequelize(db, user, pass, {operatorsAliases: {$and: Op.and}});
 
-// 如果你使用默認別名並且不限制它們，Sequelize 會發出警告，俗果你想繼續使用所有默認別名 (不包括舊版別名) 而不發出警告，你可傳遞以下運算符參數：
+const connection = new Sequelize(db, user, pass, {operatorsAliases: false});
+const connection2 = new Sequelize(db, user, pass, {operatorsAliases: {$and: Op.and}});
+
+// 如果你使用默認別名並且不限制它們，Sequelize 會發出警告。
+// 如果你想繼續使用所有默認別名 (不包括舊版別名) 而不發出警告，你可傳遞以下運算符參數：
+
 // const operatorsAliases = {
 //   $eq: Op.eq,
 //   $ne: Op.ne,
@@ -240,21 +245,21 @@ Post.sync().then(async () => {
 // MSSQL
 // MSSQL 沒有 JSON 數據類型，但是它確實提供了對於自 SQL Server 2016 以來透過某些函數存儲為字符串的 JSON 的支持。使用這些函數，你將能夠查詢存儲在字符串中的 JSON，但是任何返回的值將需要分別進行解析。
 // ISJSON - 测试一个字符串是否包含有效的 JSON
-// User.findAll({
-//   where: sequelize.where(sequelize.fn('ISJSON', sequelize.col('userDetails')), 1)
-// });
+User.findAll({
+  where: sequelize.where(sequelize.fn('ISJSON', sequelize.col('userDetails')), 1)
+});
 // // JSON_VALUE - 从 JSON 字符串提取标量值
-// User.findAll({
-//   attributes: [[sequelize.fn('JSON_VALUE', sequelize.col('userDetails'), '$.address.Line1'), 'address line 1']]
-// });
+User.findAll({
+  attributes: [[sequelize.fn('JSON_VALUE', sequelize.col('userDetails'), '$.address.Line1'), 'address line 1']]
+});
 // // JSON_VALUE - 从 JSON 字符串中查询标量值
-// User.findAll({
-//   where: sequelize.where(sequelize.fn('JSON_VALUE', sequelize.col('userDetails'), '$.address.Line1'), '14, Foo Street')
-// });
+User.findAll({
+  where: sequelize.where(sequelize.fn('JSON_VALUE', sequelize.col('userDetails'), '$.address.Line1'), '14, Foo Street')
+});
 // // JSON_QUERY - 提取一个对象或数组
-// User.findAll({
-//   attributes: [[ sequelize.fn('JSON_QUERY', sequelize.col('userDetails'), '$.address'), 'full address']]
-// })
+User.findAll({
+  attributes: [[sequelize.fn('JSON_QUERY', sequelize.col('userDetails'), '$.address'), 'full address']]
+});
 
 // JSONB
 // JSONB 可以以三種不同的方式進行查詢
@@ -291,6 +296,8 @@ Post.sync().then(async () => {
 const Project = sequelize.define('project', {/* ... */});
 
 Project.sync().then(() => {
+
+
   // 關係 / 關聯
   // 找到所有具有至少一个 task 的  project，其中 task.state === project.state
   Project.findAll({
@@ -300,33 +307,74 @@ Project.sync().then(() => {
     }]
   });
 
+
   // 分頁 / 限制
-  Project.findAll({limit: 10, offset: 10});
+
+  // 获取10个实例/行
+  Project.findAll({limit: 10});
+
+  // 跳过8个实例/行
+  Project.findAll({offset: 8});
+
+  // 跳过5个实例，然后取5个
+  Project.findAll({offset: 5, limit: 5});
+
 
   // 排序
-  // order 需要一個條目的數組來排序查詢或者一個 sequelize 方法。一般來說，你將要使用任一屬性的 tuple/array，並確定排序的正反方向
-  // Project.findAll({
-  //   order: [
-  //     [title, 'DESC'],
-  //     sequelize.fn('max', sequelize.col('age')),
-  //     [Task, 'createdAt', 'DESC'],
-  //     [Project.associations.Task, 'createdAt', 'DESC'],
-  //     [{model: Task, as: 'Task'}, 'createdAt', 'DESC']
-  //     // ...
-  //   ]
-  // });
-  Project.findAll({
-    order: sequelize.literal('max(age) DESC')
-  })
-  Project.findAll({
-    order: sequelize.fn('max', sequelize.col('age'))
-  })
-  Project.findAll({
-    order: sequelize.col('age')
-  })
-  Project.findAll({
-    order: sequelize.random()
-  })
+
+  // order 需要一個條目的陣列來排序查詢或者一個 sequelize 方法。一般來說，你將要使用任一屬性的 tuple/array，並確定排序的正反方向
+
+  Subtask.findAll({
+    order: [
+      // 将转义标题，并根据有效的方向参数列表验证DESC
+      ['title', 'DESC'],
+
+      // 将按最大值排序(age)
+      sequelize.fn('max', sequelize.col('age')),
+
+      // 将按最大顺序(age) DESC
+      [sequelize.fn('max', sequelize.col('age')), 'DESC'],
+
+      // 将按 otherfunction 排序(`col1`, 12, 'lalala') DESC
+      [sequelize.fn('otherfunction', sequelize.col('col1'), 12, 'lalala'), 'DESC'],
+
+      // 将使用模型名称作为关联的名称排序关联模型的 created_at。
+      [Task, 'createdAt', 'DESC'],
+
+      // Will order through an associated model's created_at using the model names as the associations' names.
+      [Task, Project, 'createdAt', 'DESC'],
+
+      // 将使用关联的名称由关联模型的created_at排序。
+      ['Task', 'createdAt', 'DESC'],
+
+      // Will order by a nested associated model's created_at using the names of the associations.
+      ['Task', 'Project', 'createdAt', 'DESC'],
+
+      // Will order by an associated model's created_at using an association object. (优选方法)
+      [Subtask.associations.Task, 'createdAt', 'DESC'],
+
+      // Will order by a nested associated model's created_at using association objects. (优选方法)
+      [Subtask.associations.Task, Task.associations.Project, 'createdAt', 'DESC'],
+
+      // Will order by an associated model's created_at using a simple association object.
+      [{model: Task, as: 'Task'}, 'createdAt', 'DESC'],
+
+      // 嵌套关联模型的 created_at 简单关联对象排序
+      [{model: Task, as: 'Task'}, {model: Project, as: 'Project'}, 'createdAt', 'DESC']
+    ],
+
+    // 将按年龄最大值降序排列
+    // order: sequelize.literal('max(age) DESC'),
+
+    // 按最年龄大值升序排列，当省略排序条件时默认是升序排列
+    // order: sequelize.fn('max', sequelize.col('age')),
+
+    // 按升序排列是省略排序条件的默认顺序
+    // order: sequelize.col('age'),
+
+    // 将根据方言随机排序 (而不是 fn('RAND') 或 fn('RANDOM'))
+    // order: sequelize.random()
+  });
 
   // Table Hint
   // 當使用 MSSQL 時，可以使用 tableHint 來選擇傳遞一個表提示。該提示必須是來自 Sequelize.TableHints 的值，只能在絕對必要時使用。每個查詢當前僅支持單個表提示
