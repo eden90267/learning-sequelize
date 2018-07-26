@@ -29,8 +29,8 @@ User.hasOne(Project);
 
 // 外鍵
 // 當你在模型中創建關聯時，會自動創建帶約束的外鍵引用
-const Task = sequelize.define('task', { title: Sequelize.STRING });
-const User = sequelize.define('user', { username: Sequelize.STRING });
+const Task = sequelize.define('task', {title: Sequelize.STRING});
+const User = sequelize.define('user', {username: Sequelize.STRING});
 
 User.hasMany(Task); // 將會添加 userId 到 Task 模型
 Task.belongsTo(User); // 也將會添加 userId 到 Task 模型
@@ -38,25 +38,25 @@ Task.belongsTo(User); // 也將會添加 userId 到 Task 模型
 // 將生成以下 SQL：
 
 /**
-CREATE TABLE IF NOT EXISTS "users" (
-  "id" SERIAL,
-  "username" VARCHAR(255),
-  "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
-  "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
-  PRIMARY KEY ("id")
-);
+ CREATE TABLE IF NOT EXISTS "users" (
+ "id" SERIAL,
+ "username" VARCHAR(255),
+ "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ PRIMARY KEY ("id")
+ );
 
-CREATE TABLE IF NOT EXISTS "tasks" (
-  "id" SERIAL,
-  "title" VARCHAR(255),
-  "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
-  "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
-  "userId" INTEGER REFERENCES "users" ("id") ON DELETE
-SET
-NULL ON UPDATE CASCADE,
-  PRIMARY KEY ("id")
-);
-*/
+ CREATE TABLE IF NOT EXISTS "tasks" (
+ "id" SERIAL,
+ "title" VARCHAR(255),
+ "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ "userId" INTEGER REFERENCES "users" ("id") ON DELETE
+ SET
+ NULL ON UPDATE CASCADE,
+ PRIMARY KEY ("id")
+ );
+ */
 
 // 默认情况下，如果引用的用户被删除，userId 将被设置为 NULL，如果更新了 userId，则更新 userId
 // 这些选项可以通过将 onUpdate 和 onDelete 选项传递给关联调用来覆盖。 验证选项是 RESTRICT, CASCADE, NO ACTION, SET DEFAULT, SET NULL
@@ -106,5 +106,108 @@ Task.belongsTo(User);
  NULL ON UPDATE CASCADE,
  PRIMARY KEY ("id")
  );
-*/
+ */
 
+// 注入到模型中的下劃線選項屬性仍然是駱駝式的，但 field 選項設置為其下劃線版本
+
+
+// 循環依賴 & 禁用約束
+
+// 在表之間添加約束意味著當使用 sequelize.sync 時，表必須以特定順序在數據庫中創建表。如果 Task 具有對 User 的引用，users 表必須在創建 tasks 表之前創建。這有時會導致循環引用，那麼 sequelize 將無法找到要同步的順序。
+// 想像一下文檔和版本的場景。一個文檔可以有多少版本，並且為了方便起見，文檔引用了它的當前版本。
+
+const Document = sequelize.define('document', {
+  author: Sequelize.STRING
+});
+const Version = sequelize.define('version', {
+  timestamp: Sequelize.DATE
+});
+
+Document.hasMany(Version); // 这将 documentId 属性添加到 version
+Document.belongsTo(Version, {
+  as: 'Current',
+  foreignKey: 'currentVersionId'
+}); // 这将 currentVersionId 属性添加到 document
+
+// 但是，上面的代碼將導致以下錯誤：
+// Cyclic dependency found. documents is dependent of itself. Dependency chain: documents -> versions => documents.
+
+// 為了減緩這一點，我們可以向其中一個關鍵傳遞 constraints: false
+Document.hasMany(Version);
+Document.belongsTo(Version, {
+  as: 'Current',
+  foreignKey: 'currentVersionId',
+  constraints: false
+});
+
+// 這將可以讓我們正確同步表：
+
+/**
+ CREATE TABLE IF NOT EXISTS "documents" (
+ "id" SERIAL,
+ "author" VARCHAR(255),
+ "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ "currentVersionId" INTEGER,
+ PRIMARY KEY ("id")
+ );
+
+ CREATE TABLE IF NOT EXISTS "versions" (
+ "id" SERIAL,
+ "timestamp" TIMESTAMP WITH TIME ZONE,
+ "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+ "documentId" INTEGER REFERENCES "documents" ("id") ON DELETE
+ SET
+ NULL ON UPDATE CASCADE,
+ PRIMARY KEY ("id")
+ );
+ */
+
+
+// 無限制地執行外鍵引用
+
+// 有時你可能想引用另一個表，而不添加任何約束或關聯。在這種情況下，您可以手動將參考屬性添加到您的模式定義中，並標記它們之間的關係。
+
+const Trainer = sequelize.define('trainer', {
+  firstName: Sequelize.STRING,
+  lastName: Sequelize.STRING
+});
+
+// Series 將有一個 trainerId = Trainer.id 外參考鍵
+// 之後我們調用 Trainer.hasMany(series)
+const Series = sequelize.define('series', {
+  title: Sequelize.STRING,
+  subTitle: Sequelize.STRING,
+  description: Sequelize.TEXT,
+  // 用 `Trainer` 设置外键关系（hasMany）
+  trainerId: {
+    type: Sequelize.INTEGER,
+    references: {
+      model: Trainer,
+      key: 'id'
+    }
+  }
+});
+
+// Video 将有 seriesId = Series.id 外参考键
+// 之后我们调用 Series.hasOne(Video)
+const Video = sequelize.define('video', {
+  title: Sequelize.STRING,
+  sequence: Sequelize.INTEGER,
+  description: Sequelize.TEXT,
+  // 用 `Series` 設置關係 (hasOne)
+  seriesId: {
+    type: Sequelize.INTEGER,
+    references: {
+      model: Series, // 可以是表名的字符串，也可以是 Sequelize 模型
+      key: 'id'
+    }
+  }
+});
+
+Series.hasOne(Video);
+Trainer.hasMany(Series);
+
+
+// 一對一關聯
