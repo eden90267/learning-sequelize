@@ -211,3 +211,179 @@ Trainer.hasMany(Series);
 
 
 // 一對一關聯
+
+// 透過單個外鍵連接的兩個模型之間的關聯
+
+// BelongsTo
+// 在 source model 上存在一對一關係的外鍵的關聯
+// Player 透過 player 的外鍵作為 Team 的一部分
+const Player = sequelize.define('player', {/* attributes */});
+const Team  = sequelize.define('team', {/* attributes */});
+
+Player.belongsTo(Team); // 将向 Player 添加一个 teamId 属性以保存 Team 的主键值
+
+// 外鍵
+
+// 默認情況是目标模型名称和目标主键名称生成 belongsTo 关系的外键。
+// 默认的样式是 camelCase，但是如果源模型配置为 underscored: true ，那么将使用字段 snake_case 创建 foreignKey
+
+const User = this.sequelize.define('user', {/* attributes */})
+const Company  = this.sequelize.define('company', {/* attributes */});
+
+// 将 companyId 添加到 user
+User.belongsTo(Company);
+
+const User = this.sequelize.define('user', {/* attributes */}, {underscored: true})
+const Company  = this.sequelize.define('company', {
+  uuid: {
+    type: Sequelize.UUID,
+    primaryKey: true
+  }
+});
+
+// 将用字段 company_uuid 添加 companyUuid 到 user
+User.belongsTo(Company);
+
+// 在已定义 as 的情况下，将使用它代替目标模型名称。
+const User = this.sequelize.define('user', {/* attributes */})
+const UserRole  = this.sequelize.define('userRole', {/* attributes */});
+
+User.belongsTo(UserRole, {as: 'role'}); // 将 role 添加到 user 而不是 userRole
+
+// 在所有情况下，默认外键可以用 foreignKey 选项覆盖。 当使用外键选项时，Sequelize 将按原样使用：
+const User = this.sequelize.define('user', {/* attributes */});
+const Company  = this.sequelize.define('company', {/* attributes */});
+
+User.belongsTo(Company, {foreignKey: 'fk_company'}); // 将 fk_company 添加到 User
+
+// 目標鍵
+
+// 目標鍵是源模型上的外鍵行指向目標模型上的行。默認情況下，belongsTo 關係的目標鍵將是目標模型的主鍵。要定義自定義行，請使用 targetKey 選項。
+
+const User = this.sequelize.define('user', {/* attributes */})
+const Company  = this.sequelize.define('company', {/* attributes */});
+
+User.belongsTo(Company, {foreignKey: 'fk_companyname', targetKey: 'name'}); // 添加 fk_companyname 到 User
+
+
+// HasOne
+
+// HasOne 關聯是在 target model 上存在一對一關係的外鍵的關聯
+
+const User = sequelize.define('user', {/* ... */});
+const Project = sequelize.define('project', {/* ... */});
+
+// 单向关联
+Project.hasOne(User);
+
+/*
+  在此示例中，hasOne 将向 User 模型添加一个 projectId 属性 ！
+
+  此外，Project.prototype 将根据传递给定义的第一个参数获取 getUser 和 setUser 的方法。
+  如果启用了 underscore 样式，则添加的属性将是 project_id 而不是 projectId。
+
+  外键将放在 users 表上。
+
+  你也可以定义外键，例如 如果您已经有一个现有的数据库并且想要处理它：
+*/
+Project.hasOne(User, {foreignKey: 'initiator_id'});
+
+/*
+  因为 Sequelize 将使用模型的名称（define的第一个参数）作为访问器方法，
+  还可以将特殊选项传递给hasOne：
+*/
+Project.hasOne(User, {as: 'Initiator'});
+// 现在你可以获得 Project.getInitiator 和 Project.setInitiator
+
+// 或者讓我們來定義一些自己的參考
+const Person = sequelize.define('person', {/* ... */});
+
+Person.hasOne(Person, {as: 'Father'});
+// 這會將屬性 FatherId 添加到 Person
+
+// also possible:
+Person.hasOne(Person, {as: 'Father', foreignKey: 'DadId'});
+// 這會將屬性 FatherId 添加到 Person
+
+// 這兩種情況下，你都可以：
+Person.setFather
+Person.getFather
+
+// 如果你需要連結表兩次，你可以連結同一張表
+Team.hasOne(Game, {as: 'HomeTeam', foreignKey : 'homeTeamId'});
+Team.hasOne(Game, {as: 'AwayTeam', foreignKey : 'awayTeamId'});
+Game.belongsTo(Team);
+
+// 即使它被稱為 HasOne 關聯，對於大多數 1:1 關係，你通常需要 BelongsTo 關聯，因為 BelongsTo 將會在 hasOne 將添加到目標的源上添加 foreignKey
+
+// 源鍵
+
+// 源關鍵是源模型中的屬性，它的目標模型指向外鍵屬性。默認情況下，hasOne 關係的源鍵將是源模型的主要屬性。要使用自定義屬性，請使用 sourceKey 選項。
+
+const User = this.sequelize.define('user', {/* 属性 */})
+const Company  = this.sequelize.define('company', {/* 属性 */});
+
+// 将 companyName 属性添加到 User
+// 使用 Company 的 name 属性作为源属性
+Company.hasOne(User, {foreignKey: 'companyName', sourceKey: 'name'});
+
+
+// HasOne 和 BelongsTo 之間的區別
+
+// 在 Sequelize 1:1 關係中可以使用 HasOne 和 BelongsTo 進行設置。它們適用於不同的場景。我們用一個例子來研究這個差異：
+
+// 假設兩個表可以鏈接 Player 和 Team。讓我們定義他們的模型。
+
+const Player = this.sequelize.define('player', {/* attributes */})
+const Team  = this.sequelize.define('team', {/* attributes */});
+
+// 將 Player 作為 source 而 Team 作為 target
+Player.belongsTo(Team);
+// or
+Team.hasOne(Player);
+
+// HasOne 和 BelongsTo 將關聯鍵插入到不同的模型中。HasOne 在 target 模型中插入關鍵鍵，而 BelongsTo 將關聯鍵。
+
+// 下面是一個示例，說明了 BelongsTo 和 HasOne 的用法。
+
+const Player = this.sequelize.define('player', {/* attributes */});
+const Coach = this.sequelize.define('coach', {/* attributes */});
+const Team  = this.sequelize.define('team', {/* attributes */});
+
+// 假设我们的 Player 模型有关于其团队的信息为 teamId 行。关于每个团队的 Coach 的信息作为 coachId 行存储在 Team 模型中。这两种情况都需要不同种类的1：1关系，因为外键关系每次出现在不同的模型上。
+
+// 当关于关联的信息存在于 source 模型中时，我们可以使用 belongsTo。
+Player.belongsTo(Team); // `teamId` 将被添加到 Player / Source 模型中
+
+// 当关于关联的信息存在于 target 模型中时，我们可以使用 hasOne。
+Coach.hasOne(Team); // `coachId` 将被添加到 Team / Target 模型中
+
+
+// 一對多關聯 (hasMany)
+
+// 一對多關聯將一個來源與多個目標連接起來。而多個目標接到同一個特定的源
+
+const User = sequelize.define('user', {/* ... */})
+const Project = sequelize.define('project', {/* ... */})
+
+// 好。 现在，事情变得更加复杂（对用户来说并不真实可见）。
+// 首先我们来定义一个 hasMany 关联
+Project.hasMany(User, {as: 'Workers'});
+
+// 这会将projectId 属性添加到 User。 根据您强调的设置，表中的行将被称为 projectId 或 project_id。
+// Project 的实例将获得访问器 getWorkers 和 setWorkers。
+
+// 有時您可能需要在不同的行上關聯紀錄，您可以使用 sourceKey 選項：
+
+const City = sequelize.define('city', { countryCode: Sequelize.STRING });
+const Country = sequelize.define('country', { isoCode: Sequelize.STRING });
+
+Country.hasMany(City, {foreignKey: 'countryCode', sourceKey: 'isoCode'});
+City.belongsTo(Country, {foreignKey: 'countryCode', targetKey: 'isoCode'});
+
+
+// 多對多關聯
+
+// 多对多关联用于将源与多个目标相连接。 此外，目标也可以连接到多个源
+Project.belongsToMany(User, {through: 'UserProject'});
+User.belongsToMany(Project, {through: 'UserProject'});
