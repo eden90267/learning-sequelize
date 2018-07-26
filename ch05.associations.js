@@ -387,3 +387,11 @@ City.belongsTo(Country, {foreignKey: 'countryCode', targetKey: 'isoCode'});
 // 多对多关联用于将源与多个目标相连接。 此外，目标也可以连接到多个源
 Project.belongsToMany(User, {through: 'UserProject'});
 User.belongsToMany(Project, {through: 'UserProject'});
+
+// 這將創建一個名為 UserProject 的新模型，具有等效的外鍵 projectId 和 userId。屬性是否為 camelcase 取决于由表（在这种情况下为 User 和 Project）连接的两个模型
+
+// 定義 through 為 required。Sequelize 以前會嘗試自動生成名稱名稱，但並不總是導致最合乎邏輯的設置。
+
+// 這將添加方法 getUsers, setUsers, addUser, addUsers 到 Project，還有 getProjects, setProjects, addProject, 和 addProjects 到 User
+
+// 有時，您可能需要在關聯中使用它們
