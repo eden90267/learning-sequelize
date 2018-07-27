@@ -394,4 +394,50 @@ User.belongsToMany(Project, {through: 'UserProject'});
 
 // 這將添加方法 getUsers, setUsers, addUser, addUsers 到 Project，還有 getProjects, setProjects, addProject, 和 addProjects 到 User
 
-// 有時，您可能需要在關聯中使用它們
+// 有時，您可能需要在關聯中使用它們時重命名模型。讓我們透過使用別名 (as) 選項將 users 定義為 workers 而 projects 定義為 tasks。我們還將手動定義要使用的外鍵：
+User.belongsToMany(Project, {as: 'Tasks', through: 'worker_tasks', foreignKey: 'userId'});
+Project.belongsToMany(User, {as: 'Workers', through: 'worker_tasks', foreignKey: 'projectId'});
+
+// foreignKey 將允許你在 through 關係中設置 source model 鍵
+// otherKey 將允許你在 through 關係中設置 target model 鍵
+User.belongsToMany(Project, {as: 'Tasks', through: 'worker_tasks', foreignKey: 'userId', otherKey: 'projectId'});
+
+// 當然你也可以使用 belongsToMany 定義自我引用
+Person.belongsToMany(Person, {as: 'Children', through: 'PersonChildren'}); // 這將創建存儲物件的 ID 的表 PersonChildren。
+
+// 如果您想要連接表中的其他屬性，則可以在定義關聯之前為連接表定義一個模型，然後再說明它應該使用該模型進行連接，而不是創建一個新的關聯：
+const User = sequelize.define('user', {});
+const Project = sequelize.define('project', {});
+const UserProjects = sequelize.define('userProjects', {
+  status: DataTypes.STRING
+});
+
+User.belongsToMany(Project, {through: UserProjects});
+Project.belongsToMany(User, {through: UserProjects});
+
+// 要向 user 添加一個新 project 並設置其狀態，您可將額外的 options.through 傳遞給 setter，其中包含連接表的屬性。
+user.addProject(project, {through: {status: 'started'}});
+
+// 默認情況下，上面的代碼會將 projectId 和 userId 添加到 UserProjects 表中，刪除任何先前定義的主鍵屬性 - 表將由兩個表的鍵的組合唯一標識，並且沒有其他主鍵行。要在 UserProjects 模型上強添加一個主鍵，您可以手動添加它。
+const UserProjects = sequelize.define('userProjects', {
+  id: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  status: DataTypes.STRING
+});
+
+// 使用多對多你可以基於 through 關係查詢並選擇特定屬性。例如透過 through 使用 findAll
+User.findAll({
+  include: [{
+    model: Project,
+    through: {
+      attribute: ['createdAt', 'startedAt', 'finishedAt'],
+      where: {completed: true}
+    }
+  }]
+});
+
+
+// 命名策略
