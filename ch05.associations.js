@@ -441,3 +441,170 @@ User.findAll({
 
 
 // 命名策略
+
+// 默认情况下，Sequelize将使用模型名称（传递给sequelize.define的名称），以便在关联时使用模型名称。例如，一个名为user的模型会将关联模型的实例中的 get / set / add User 函数和加入一个名为 .user 的属性，而一个名为 User 的模型会添加相同的功能，和一个名为 .User 的属性（注意大写U）。
+
+// 正如我们已经看到的，你可以使用 as 来关联模型。 在单个关联（has one 和 belongs to），别名应该是单数，而对于许多关联（has many）它应该是复数。 Sequelize然后使用[inflection] 0库将别名转换为其单数形式。 但是，这可能并不总是适用于不规则或非英语单词。 在这种情况下，您可以提供复数和单数形式的别名：
+
+User.belongsToMany(Project, {as: {singular: 'task', plural: 'tasks'}});
+// Notice that inflection has no problem singularizing tasks, this is just for illustrative purposes.
+
+// 如果你知道模型将始终在关联中使用相同的别名，则可以在创建模型时提供它
+
+const Project = sequelize.define('project', attributes, {
+  name: {
+    singular: 'task',
+    plural: 'tasks',
+  }
+});
+
+User.belongsToMany(Project);
+
+// 这将为用户实例添加 add/set/get Tasks 方法。
+
+// 记住，使用 as 来更改关联的名称也会改变外键的名称。当使用 as 时，也可以指定外键是最安全的。
+
+Invoice.belongsTo(Subscription);
+Subscription.hasMany(Invoice);
+
+// 不使用 as，这会按预期添加 subscriptionId。
+// 但是，如果您要发送 Invoice.belongsTo(Subscription, { as: 'TheSubscription' })，那么您将同时拥有 subscriptionId 和 theSubscriptionId，因为 sequelize 不够聪明，无法确定调用是相同关系的两面。
+// foreignKey 修正了這個問題：
+Invoice.belongsTo(Subscription, {as: 'TheSubscription', foreignKey: 'subscription_id'});
+Subscription.hasMany(Invoice, {foreignKey: 'subscription_id'});
+
+
+// 關聯對象
+
+// 因為 Sequelize 做了很多神奇的事，所以你必須在設置關聯後調用 Sequelize.sync。這樣做將允許您進行以下操作：
+
+Project.hasMany(Task);
+Task.belongsTo(Project);
+
+Project.create() // ...
+Task.create() // ...
+Task.create() // ...
+
+// 保存它們，然後：
+project.setTasks([task1, task2]).then(() => {
+  // 已保存
+});
+
+// 好的，现在它们已经保存了...我怎么才能得到他们？
+project.getTasks().then(associatedTasks => {
+  // associatedTasks 是一个 tasks 的数组
+});
+
+// 您还可以将过滤器传递给 getter 方法。
+// 它们与你能传递给常规查找器方法的选项相同。
+project.getTasks({where: 'id > 10'}).then(tasks => {
+  // id 大于 10 的任务
+});
+
+project.getTasks({attributes: ['title']}).then(tasks => {
+  // 使用屬性 "title" 和 "id" 檢索任務
+});
+
+// 要删除创建的关联，您可以调用 set 方法而不使用特定的 ID：
+
+// 刪除與 task1 的關聯
+project.setTasks([task2]).then(associatedTasks => {
+  // 你將只得到 task2
+});
+
+// 删除全部
+project.setTasks([]).then(associatedTask => {
+  // 你将得到空数组
+});
+
+// 或更直接地删除
+project.removeTask(task1).then(() => {
+  // 什麼都沒有
+});
+
+// 然後再次添加它們
+project.addTask(task1).then(function () {
+  // 它们又回来了
+});
+
+// 反之亦然你当然也可以这样做：
+
+task2.setProject(null).then(() => {
+  // 什麼都沒有
+});
+
+// 对于 hasOne/belongsTo 与其基本相同:
+Task.hasOne(User, {as: "Author"});
+Task.setAuthor(anAuthor);
+
+// 可以通过两种方式添加与自定义连接表的关系的关联（继续前一章中定义的关联）：
+
+// 在创建关联之前，通过向对象添加具有连接表模型名称的属性
+project.UserProjects = {
+  status: 'active'
+};
+u.addProject(project);
+
+// 或者在添加关联时提供第二个options.through参数，其中包含应该在连接表中的数据
+u.addProject(project, {through: {status: 'active'}});
+
+// 关联多个对象时，可以组合上述两个选项。 在这种情况下第二个参数如果没有提供使用的数据将被视为默认对象
+
+project1.UserProjects = {
+  status: 'inactive'
+};
+
+u.setProjects([project1, project2], {through: {status: 'active'}});
+// 上述代码将对项目1记录无效，并且在连接表中对项目2进行 active
+
+// 当获取具有自定义连接表的关联的数据时，连接表中的数据将作为 DAO 实例返回：
+u.getProjects().then(projects => {
+  const project = projects[0];
+
+  if (project.UserProjects.status === 'active') {
+    // ... 做點什麼
+
+    // 由於这是一个真正的DAO实例，您可以在完成操作之后直接保存它
+    return project.UserProjects.save()
+  }
+});
+
+// 如果您仅需要连接表中的某些属性，则可以提供具有所需属性的陣列：
+
+// 这将仅从 Projects 表中选择 name，仅从 UserProjects 表中选择status
+user.getProjects({attributes: ['name'], joinTableAttributes: ['status']});
+
+
+// 檢查關聯
+
+// 你還可以檢查對象是否已經與另一對象相關聯 (僅 n:m)。
+
+// // 检查对象是否是关联对象之一：
+Project.create({/**/}).then(project => {
+  return User.create({/**/}).then(user => {
+    return project.hasUser(user).then(result => {
+      // 結果是 false
+      return project.addUser(user).then(() => {
+        return project.hasUser(user).then(result => {
+          // 結果是 true
+        })
+      })
+    })
+  })
+})
+
+// 检查所有关联的对象是否如预期的那样：
+// 我们假设我们已经有一个项目和两个用户
+project.setUsers([user1, user2]).then(() => {
+  return project.hasUsers([user1]);
+}).then(result => {
+  // 結果是 true
+  return project.hasUsers([user1, user2]);
+}).then(result => {
+  // 結果是 true
+});
+
+
+// 高級概念
+
+// 作用域
