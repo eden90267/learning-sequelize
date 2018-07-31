@@ -153,3 +153,44 @@ Project.scope('deleted').findAll({
 
 // - 關聯作用域：允許您在获取和设置关联时指定默认属性 - 在实现多态关联时很有用。 当使用 get、set、add 和 create 相关联的模型函数时，这个作用域仅在两个模型之间的关联上被调用
 // - 關聯模型上的作用域：允许您在获取关联时应用默认和其他作用域，并允许您在创建关联时传递作用域模型。这些作用域都适用于模型上的常规查找和透过关联查找。
+
+// 舉例，思考模型 Post 和 Comment。註釋與其他幾個模型 (圖像、視頻等) 相關聯，註釋和其他模型之間的關聯是多態的，這意味著除了外鍵 commentable_id 之外，注釋還儲存一個 commentable 行。
+// 可以使用 association scope 來實現多態關聯：
+
+Post.hasMany(Comment, {
+  foreignKey: 'commentable_id',
+  scope: {
+    commentable: 'post'
+  }
+});
+
+// 當調用 post.getComments() 時，這將自動添加 WHERE commentable = 'post'。類似地，當向帖子添加新的注釋時，commentable 會自動設置為 'post'。關聯作用域至為了存活於後台，沒有程序員不必擔心 - 它不能被禁用。
+
+// 那麼考慮那個 Post 默認作用域只顯示活動的帖子：where: {active: true}。該作用域存在於相關聯的模型 (Post) 上，而不是像 commentable 作用域那样在关联上。就像在調用 Post.findAll() 時一樣應用默認作用域，當調用 User.getPosts() 時，它也会被应用 - 这只会返回该用户的活动帖子。
+
+// 要禁用默認作用域，將 scope: null 傳遞給 getter：User.getPosts({scope: null})。同樣，如果要應用其他作用域，請像這樣：
+
+User.getPosts({scope: ['scope1', 'scope2']});
+
+// 如果要為關聯模型上的作用域創建快捷方式，可以將作用域模型傳遞給關聯。考慮一個快捷方式來獲取用戶所有已刪除的帖子：
+
+const Post = sequelize.define('post', attributes, {
+  defaultScope: {
+    where: {
+      active: true
+    }
+  },
+  scopes: {
+    deleted: {
+      where: {
+        deleted: true
+      }
+    }
+  }
+});
+
+User.hasMany(Post);// 常規 getPosts 關聯
+User.hasMany(Post.scope('deleted'), {as: 'deletedPosts'});
+
+User.getPosts(); // WHERE active = true
+User.getDeletedPosts(); // WHERE deleted = true

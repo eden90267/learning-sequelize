@@ -608,3 +608,87 @@ project.setUsers([user1, user2]).then(() => {
 // 高級概念
 
 // 作用域
+
+// 關聯作用域允許您在關聯上放置一個作用域 (一套 get 和 create 的默認屬性)。作用域可以放在相關連的模型上 (關聯的 target) 上，也可透過表上的 n:m 關係。
+
+
+// 1:n
+
+// 假設我們有模型 Comment、Post 和 Image。一个评论可以通过 commentableId 和 commentable 关联到一个图像或一个帖子 - 我們說 Post 和 Image 是 Commentable
+
+const Post = sequelize.define('post', {
+  title: Sequelize.STRING,
+  text: Sequelize.STRING
+});
+
+const Image = sequelize.define('image', {
+  title: Sequelize.STRING,
+  link: Sequelize.STRING
+});
+
+const Comment = sequelize.define('comment', {
+  title: Sequelize.STRING,
+  commentable: Sequelize.STRING,
+  commentableId: Sequelize.INTEGER
+});
+
+Comment.prototype.getItem = function (options) {
+  return this[
+    'get' +
+    this.get('commentable').substr(0,1).toUpperCase() +
+    this.get('commentable').substr(1)
+    ](options);
+};
+
+Post.hasMany(Comment, {
+  foreignKey: 'commentableId',
+  constraints: false,
+  scope: {
+    commentable: 'post'
+  }
+});
+
+Comment.belongsTo(Post, {
+  foreignKey: 'commentableId',
+  constraints: false,
+  as: 'post'
+});
+
+Image.hasMany(Comment, {
+  foreignKey: 'commentableId',
+  constraints: false,
+  scope: {
+    commentable: 'image'
+  }
+});
+
+Comment.belongsTo(Image, {
+  foreignKey: 'commentableId',
+  constraints: false,
+  as: 'image'
+});
+
+// constraints: false 禁用了引用约束，因为 commentable_id 行引用了多个表，所以我们不能给它添加 REFERENCES 约束
+
+// 请注意，Image - > Comment 和 Post - > Comment 关系分别定义了一个作用域：commentable: 'image' 和 commentable: 'post'。 使用关联功能时自动应用此作用域：
+
+image.getComments();
+//  SELECT "id", "title", "commentable", "commentableId", "createdAt", "updatedAt" FROM "comments" AS "comment" WHERE "comment"."commentable" = 'image' AND "comment"."commentableId" = 1;
+
+image.createComment({
+  title: 'Awesome!'
+});
+// INSERT INTO "comments" ("id","title","commentable","commentableId","createdAt","updatedAt") VALUES (DEFAULT,'Awesome!','image',1,'2018-04-17 05:36:40.454 +00:00','2018-04-17 05:36:40.454 +00:00') RETURNING *;
+
+image.addComment(comment);
+// UPDATE "comments" SET "commentableId"=1,"commentable"='image',"updatedAt"='2018-04-17 05:38:43.948 +00:00' WHERE "id" IN (1)
+
+// Comment 上的 getItem 作用函数完成了图片 - 它只是将 commentable 字符串转换为 getImage 或 getPost 的一个调用，提供一个注释是属于一个帖子还是一个图像的抽象概念。您可以将普通选项对象作为参数传递给 getItem(options)，以指定任何条件或包含的位置。
+
+
+// n:m
+
+// 繼續多態模型的思路，考慮一個 tag 表 - 一個 item 可以有多個 tag，一個 tag 可以與多個 item 相關。
+
+// 为了简洁起见，该示例仅显示了 Post 模型，但实际上 Tag 与其他几个模型相关。
+
