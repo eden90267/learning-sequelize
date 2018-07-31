@@ -218,7 +218,7 @@ Trainer.hasMany(Series);
 // 在 source model 上存在一對一關係的外鍵的關聯
 // Player 透過 player 的外鍵作為 Team 的一部分
 const Player = sequelize.define('player', {/* attributes */});
-const Team  = sequelize.define('team', {/* attributes */});
+const Team = sequelize.define('team', {/* attributes */});
 
 Player.belongsTo(Team); // 将向 Player 添加一个 teamId 属性以保存 Team 的主键值
 
@@ -228,13 +228,13 @@ Player.belongsTo(Team); // 将向 Player 添加一个 teamId 属性以保存 Tea
 // 默认的样式是 camelCase，但是如果源模型配置为 underscored: true ，那么将使用字段 snake_case 创建 foreignKey
 
 const User = this.sequelize.define('user', {/* attributes */})
-const Company  = this.sequelize.define('company', {/* attributes */});
+const Company = this.sequelize.define('company', {/* attributes */});
 
 // 将 companyId 添加到 user
 User.belongsTo(Company);
 
 const User = this.sequelize.define('user', {/* attributes */}, {underscored: true})
-const Company  = this.sequelize.define('company', {
+const Company = this.sequelize.define('company', {
   uuid: {
     type: Sequelize.UUID,
     primaryKey: true
@@ -246,13 +246,13 @@ User.belongsTo(Company);
 
 // 在已定义 as 的情况下，将使用它代替目标模型名称。
 const User = this.sequelize.define('user', {/* attributes */})
-const UserRole  = this.sequelize.define('userRole', {/* attributes */});
+const UserRole = this.sequelize.define('userRole', {/* attributes */});
 
 User.belongsTo(UserRole, {as: 'role'}); // 将 role 添加到 user 而不是 userRole
 
 // 在所有情况下，默认外键可以用 foreignKey 选项覆盖。 当使用外键选项时，Sequelize 将按原样使用：
 const User = this.sequelize.define('user', {/* attributes */});
-const Company  = this.sequelize.define('company', {/* attributes */});
+const Company = this.sequelize.define('company', {/* attributes */});
 
 User.belongsTo(Company, {foreignKey: 'fk_company'}); // 将 fk_company 添加到 User
 
@@ -261,7 +261,7 @@ User.belongsTo(Company, {foreignKey: 'fk_company'}); // 将 fk_company 添加到
 // 目標鍵是源模型上的外鍵行指向目標模型上的行。默認情況下，belongsTo 關係的目標鍵將是目標模型的主鍵。要定義自定義行，請使用 targetKey 選項。
 
 const User = this.sequelize.define('user', {/* attributes */})
-const Company  = this.sequelize.define('company', {/* attributes */});
+const Company = this.sequelize.define('company', {/* attributes */});
 
 User.belongsTo(Company, {foreignKey: 'fk_companyname', targetKey: 'name'}); // 添加 fk_companyname 到 User
 
@@ -310,8 +310,8 @@ Person.setFather
 Person.getFather
 
 // 如果你需要連結表兩次，你可以連結同一張表
-Team.hasOne(Game, {as: 'HomeTeam', foreignKey : 'homeTeamId'});
-Team.hasOne(Game, {as: 'AwayTeam', foreignKey : 'awayTeamId'});
+Team.hasOne(Game, {as: 'HomeTeam', foreignKey: 'homeTeamId'});
+Team.hasOne(Game, {as: 'AwayTeam', foreignKey: 'awayTeamId'});
 Game.belongsTo(Team);
 
 // 即使它被稱為 HasOne 關聯，對於大多數 1:1 關係，你通常需要 BelongsTo 關聯，因為 BelongsTo 將會在 hasOne 將添加到目標的源上添加 foreignKey
@@ -321,7 +321,7 @@ Game.belongsTo(Team);
 // 源關鍵是源模型中的屬性，它的目標模型指向外鍵屬性。默認情況下，hasOne 關係的源鍵將是源模型的主要屬性。要使用自定義屬性，請使用 sourceKey 選項。
 
 const User = this.sequelize.define('user', {/* 属性 */})
-const Company  = this.sequelize.define('company', {/* 属性 */});
+const Company = this.sequelize.define('company', {/* 属性 */});
 
 // 将 companyName 属性添加到 User
 // 使用 Company 的 name 属性作为源属性
@@ -335,7 +335,7 @@ Company.hasOne(User, {foreignKey: 'companyName', sourceKey: 'name'});
 // 假設兩個表可以鏈接 Player 和 Team。讓我們定義他們的模型。
 
 const Player = this.sequelize.define('player', {/* attributes */})
-const Team  = this.sequelize.define('team', {/* attributes */});
+const Team = this.sequelize.define('team', {/* attributes */});
 
 // 將 Player 作為 source 而 Team 作為 target
 Player.belongsTo(Team);
@@ -348,7 +348,7 @@ Team.hasOne(Player);
 
 const Player = this.sequelize.define('player', {/* attributes */});
 const Coach = this.sequelize.define('coach', {/* attributes */});
-const Team  = this.sequelize.define('team', {/* attributes */});
+const Team = this.sequelize.define('team', {/* attributes */});
 
 // 假设我们的 Player 模型有关于其团队的信息为 teamId 行。关于每个团队的 Coach 的信息作为 coachId 行存储在 Team 模型中。这两种情况都需要不同种类的1：1关系，因为外键关系每次出现在不同的模型上。
 
@@ -375,8 +375,8 @@ Project.hasMany(User, {as: 'Workers'});
 
 // 有時您可能需要在不同的行上關聯紀錄，您可以使用 sourceKey 選項：
 
-const City = sequelize.define('city', { countryCode: Sequelize.STRING });
-const Country = sequelize.define('country', { isoCode: Sequelize.STRING });
+const City = sequelize.define('city', {countryCode: Sequelize.STRING});
+const Country = sequelize.define('country', {isoCode: Sequelize.STRING});
 
 Country.hasMany(City, {foreignKey: 'countryCode', sourceKey: 'isoCode'});
 City.belongsTo(Country, {foreignKey: 'countryCode', targetKey: 'isoCode'});
@@ -634,9 +634,9 @@ const Comment = sequelize.define('comment', {
 
 Comment.prototype.getItem = function (options) {
   return this[
-    'get' +
-    this.get('commentable').substr(0,1).toUpperCase() +
-    this.get('commentable').substr(1)
+  'get' +
+  this.get('commentable').substr(0, 1).toUpperCase() +
+  this.get('commentable').substr(1)
     ](options);
 };
 
@@ -692,3 +692,207 @@ image.addComment(comment);
 
 // 为了简洁起见，该示例仅显示了 Post 模型，但实际上 Tag 与其他几个模型相关。
 
+const ItemTag = sequelize.define('item_tag', {
+  id: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  tagId: {
+    type: Sequelize.INTEGER,
+    unique: 'item_tag_taggable'
+  },
+  taggable: {
+    type: Sequelize.STRING,
+    unique: 'item_tag_taggable'
+  },
+  taggableId: {
+    type: Sequelize.INTEGER,
+    unique: 'item_tag_taggable',
+    references: null
+  }
+});
+
+const Tag = sequelize.define('tag', {
+  name: Sequelize.STRING,
+  status: Sequelize.STRING
+});
+
+Post.belongsToMany(Tag, {
+  through: {
+    model: ItemTag,
+    unique: false,
+    scope: {
+      taggable: 'post'
+    }
+  },
+  foreignKey: 'taggableId',
+  constraints: false
+});
+
+Tag.belongsToMany(Post, {
+  through: {
+    model: ItemTag,
+    unique: false
+  },
+  foreignKey: 'tagId',
+  constraints: false
+});
+
+// 請注意，作用域行 (taggable) 現在在 through 模型 (ItemTag) 上
+
+// 我们还可以定义一个更具限制性的关联，例如，通过应用 through 模型（ItemTag）和目标模型（Tag）的作用域来获取所有挂起的 tag。
+
+Post.belongsToMany(Tag, {
+  through: {
+    model: ItemTag,
+    unique: false,
+    scope: {
+      taggable: 'post'
+    }
+  },
+  scope: {
+    status: 'pending'
+  },
+  as: 'pendingTags',
+  foreignKey: 'taggableId',
+  constraints: false
+});
+
+post.getPendingTags();
+
+/**
+ SELECT
+ "tag"."id",
+ "tag"."name",
+ "tag"."status",
+ "tag"."createdAt",
+ "tag"."updatedAt",
+ "item_tag"."id" AS "item_tag.id",
+ "item_tag"."tagId" AS "item_tag.tagId",
+ "item_tag"."taggable" AS "item_tag.taggable",
+ "item_tag"."taggableId" AS "item_tag.taggableId",
+ "item_tag"."createdAt" AS "item_tag.createdAt",
+ "item_tag"."updatedAt" AS "item_tag.updatedAt"
+ FROM
+ "tags" AS "tag"
+ INNER JOIN "item_tags" AS "item_tag" ON "tag"."id" = "item_tag"."tagId"
+ AND "item_tag"."taggableId" = 1
+ AND "item_tag"."taggable" = 'post'
+ WHERE
+ ("tag"."status" = 'pending');
+ */
+
+// constraints: false 禁用 taggableId 行上的引用约束。 因为行是多态的，我们不能说它是 REFERENCES 一个特定的表。
+
+
+// 用關聯創建
+
+// 如果所有元素都是新的，則可以在一個步驟中創建具有嵌套關聯的實例
+
+// BelongsTo / HasMany / HasOne 關聯
+
+// 考慮以下模型
+
+const Product = this.sequelize.define('product', {
+  title: Sequelize.STRING
+});
+const User = this.sequelize.define('user', {
+  firstName: Sequelize.STRING,
+  lastName: Sequelize.STRING
+});
+const Address = this.sequelize.define('address', {
+  type: Sequelize.STRING,
+  line1: Sequelize.STRING,
+  line2: Sequelize.STRING,
+  city: Sequelize.STRING,
+  state: Sequelize.STRING,
+  zip: Sequelize.STRING,
+});
+
+Project.User = Product.belongsTo(User);
+User.Addresses = User.hasMany(Address);
+// 也能用於 `hasOne`
+
+// 可以透過以下方式在一個步驟中創建一個新的 Product、User 和一個或多個 Address：
+return Project.create({
+  title: 'Chair',
+  user: {
+    firstName: 'Mick',
+    lastName: 'Broadstone',
+    addresses: [{
+      type: 'home',
+      line1: '100 Main St.',
+      city: 'Austin',
+      state: 'TX',
+      zip: '78704'
+    }]
+  }
+}, {
+  include: [{
+    association: Product.User,
+    include: [User.Addresses]
+  }]
+});
+
+// 這裏，我們的用戶模型稱為 user，帶小寫 u - 这意味着对象中的属性也应该是 user。如果给 sequelize.define 指定的名称为 User，对象中的键也应为 User。 对于 addresses 也是同样的，除了它是一个 hasMany 关联的复数。
+
+
+// 用別名創建 BelongsTo 關聯
+
+// 可以將前面的示例擴展為支持關聯別名
+
+const Creator = Product.belongsTo(User, {as: 'creator'});
+
+return Product.create({
+  title: 'Chair',
+  creator: {
+    firstName: 'Matt',
+    lastName: 'Hansen'
+  }
+}, {
+  include: [Creator]
+});
+
+
+// HasMany/BelongsToMany 關聯
+
+// 我们来介绍将产品与许多标签相关联的功能。设置模型可能如下所示：
+
+const Tag = this.sequelize.define('tag', {
+  name: Sequelize.STRING
+});
+
+Product.hasMany(Tag);
+// Also works for `belongsToMany`
+
+// 現在，我們可以透過以下方式創建具有多個標籤的產品：
+
+Product.create({
+  id: 1,
+  title: 'Chair',
+  tags: [
+    {name: 'Alpha'},
+    {name: 'Beta'}
+  ]
+}, {
+  include: [Tag]
+});
+
+// 然後，我們可以修改此示例以支持別名：
+
+const Categories = Product.hasMany(Tag, {as: 'categories'});
+
+Product.create({
+  id: 1,
+  title: 'Chair',
+  categories: [
+    {id: 1, name: 'Alpha'},
+    {id: 2, name: 'Beta'}
+  ]
+}, {
+  include: [{
+    model: Categories,
+    as: 'categories'
+  }]
+});
