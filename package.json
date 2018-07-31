@@ -11,6 +11,7 @@
   "author": "eden90267",
   "license": "ISC",
   "dependencies": {
+    "continuation-local-storage": "^3.2.1",
     "mysql2": "^1.5.3",
     "sequelize": "^4.38.0"
   },
