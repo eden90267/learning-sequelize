@@ -93,4 +93,160 @@ sequelize.transaction(function (t1) {
 
 // 並行 / 部分事務
 
-// 你可以在一系列查詢中執行併發事務，或者將某些事物從任何事務中排除。使用 {transaction: } 選項來控制查詢所屬的事務
+// 你可以在一系列查詢中執行併發事務，或者將某些事務從任何事務中排除。使用 {transaction: } 選項來控制查詢所屬的事務：
+
+// 警告：SQLite 不能同時支持多個事務
+
+// 不啟用 CLS
+
+sequelize.transaction(function (t1) {
+  return sequelize.transaction(function (t2) {
+    // 启用CLS，这里的查询将默认使用 t2
+    // 通过 `transaction` 选项来定义/更改它们所属的事务。
+    return Promise.all([
+      User.create({name: 'Bob'}, {transaction: null}),
+      User.create({name: 'Bob'}, {transaction: t1}),
+      User.create({name: 'Bob'}), // 默認為 t2
+    ])
+  })
+});
+
+
+// 隔離等級
+
+// 啟動事務時可能使用的隔離等級：
+
+Sequelize.Transaction.ISOLATION_LEVELS.READ_UNCOMMITTED;
+Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED;
+Sequelize.Transaction.ISOLATION_LEVELS.REPEATABLE_READ;
+Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE;
+
+// 默認，sequelize 使用資料庫的隔離級別。如果要使用不同的隔離級別，請傳入所需級別作為第一個參數：
+
+return sequelize.transaction({
+  isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+}, function (t) {
+  // 你的事務
+});
+
+// 注意：在 MSSQL 的情況下，SET ISOLATION LEVEL 查詢不被記錄，指定的 isolationLevel 直接傳遞到 tedious
+
+
+// 非託管事務 (then-callback)
+
+// 非托管事务强制您手动回滚或提交交易。 如果不这样做，事务将挂起，直到超时。
+// 要启动非托管事务，请调用 sequelize.transaction() 而不用 callback（你仍然可以传递一个选项对象），并在返回的 promise 上调用 then。 请注意，commit() 和 rollback() 返回一个 promise。
+
+return sequelize.transaction().then(function (t) {
+  return User.create({
+    firstName: 'Bart',
+    lastName: 'Simpson'
+  }, {transaction: t}).then(function (user) {
+    return user.addSibling({
+      firstName: 'Lisa',
+      lastName: 'Simpson'
+    }, {transaction: t});
+  }).then(function () {
+    return t.commit()
+  }).catch(function (err) {
+    return t.rollback();
+  })
+});
+
+// 參數
+
+// 可以使用 options 對象作為第一個參數來調用 transaction 方法，這允許配置事務。
+
+return sequelize.transaction({/* options */});
+
+// 以下選項 (使用默認值) 可用：
+
+// {
+//   autocommit: true,
+//   isolationLevel: 'REPEATABLE_READ',
+//   deferrable: 'NOT DEFERRABLE' // postgres 的默认设置
+// }
+
+// 在为 Sequelize 实例或每个局部事务初始化时，isolationLevel可以全局设置：
+
+// 全局
+new Sequelize('db', 'user', 'pw', {
+  isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+});
+
+// 局部
+sequelize.transaction({
+  isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+});
+
+// deferrable 选项在事务开始后触发一个额外的查询，可选地将约束检查设置为延迟或立即。 请注意，这仅在 PostgreSQL 中受支持。
+
+sequelize.transaction({
+  // 推迟所有约束：
+  deferrable: Sequelize.Deferrable.SET_DEFERRED,
+
+  // 推迟具体约束：
+  deferrable: Sequelize.Deferrable.SET_DEFERRED(['some_constraint']),
+
+  // 不推迟约束：
+  deferrable: Sequelize.Deferrable.SET_IMMEDIATE
+})
+
+
+// 使用其他 Sequelize 方法
+
+// transaction 选项与其他大多数选项一起使用，通常是方法的第一个参数。对于取值的方法，如 .create, .update(), .updateAttributes() 等。应该传递给第二个参数的选项。 如果不确定，请参阅 API 文档中的用于确定签名的方法。
+
+
+// 後提交 hook
+
+// transaction 對象允許跟蹤是否提交以及何時提交
+// 可以將 afterCommit hook 添加到託管和非託管事務對象
+
+sequelize.transaction(t => {
+  t.afterCommit((transaction) => {
+    // 你的邏輯片段
+  })
+});
+
+sequelize.transaction().then(t => {
+  t.afterCommit((transaction) => {
+    // 你的邏輯片段
+  })
+
+  return t.commit();
+});
+
+// 传递给 afterCommit 的函数可以有选择地返回一个 promise，在创建事务的 promise 链解析之前这个 promise 会被解析。
+// - afterCommit 如果事务回滚，hook 不会 被提升。
+// - afterCommit hook 不像标准 hook， 不会 修改事务的返回值。
+
+// 您可以将 afterCommit hook 与模型 hook 结合使用，以了解实例何时在事务外保存并可用
+
+model.afterSave((instance, options) => {
+  if (options.transaction) {
+    // 在事务内保存完成，等到事务被提交以通知监听器实例已被保存
+    options.transaction.afterCommit(() => {/* Notify */
+    });
+    return;
+  }
+  // 在事务之外保存完成，对于调用者来说可以安全地获取更新后的模型通知
+});
+
+
+// 鎖定
+
+// 可以使用锁执行 transaction 内的查询
+return User.findAll({
+  limit: 1,
+  lock: true,
+  transaction: t1
+});
+
+// 事務內的查詢可以跳過鎖定的列
+return User.findAll({
+  limit: 1,
+  lock: true,
+  skipLocked: true,
+  transaction: t2
+});
