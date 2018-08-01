@@ -58,3 +58,39 @@ return sequelize.transaction(function (t) {
 
 const cls = require('continuation-local-storage'),
   namespace = cls.createNamespace('my-very-own-namespace');
+
+// 要啟用 CLS，您必須透過使用 sequelize 構造函數的靜態方法來告訴 Sequelize 要使用的命名空間：
+
+Sequelize.useCLS(namespace);
+
+new Sequelize(/* ... */);
+
+// 请注意， useCLS() 方法在 构造函数 上，而不是在 sequelize 的实例上。
+// 这意味着所有实例将共享相同的命名空间，并且 CLS 是全部或全无方式 - 你不能仅在某些实例中启用它。
+
+// CLS 的工作方式就像一個用於回調的本地線程存儲。這在實踐中意味著不同的回調鏈可以透過使用CLS 命名空間來訪問局部變量。
+// 當啟用 CLS 時，創建新事務時，Sequelize 將在命名空間上設置 transaction 屬性。由於回調鏈中設置的變數對該鏈是私有的，因此可以存在多個併發事務。
+
+sequelize.transaction(function (t1) {
+  namespace.get('transaction') === t1; // true
+});
+
+sequelize.transaction(function (t2) {
+  namespace.get('transaction') === t2; // true
+});
+
+// 在大多数情况下，你不需要直接访问 namespace.get('transaction')，因为所有查询都将自动在命名空间中查找事务：
+
+sequelize.transaction(function (t1) {
+  // 启用 CLS 后，将在事务中创建用户
+  return User.create({ name: 'Alice' });
+});
+
+// 在使用 Sequelize.useCLS() 后，从 sequelize 返回的所有 promise 将被修补以维护 CLS 上下文。 CLS 是一个复杂的课题 - cls-bluebird 的文档中有更多细节，用于使 bluebird promise 的补丁与CLS一起工作。
+
+// 注意：当使用 cls-hooked 软件包的时候，CLS 仅支持 async/await. 即使，cls-hooked 依靠 *试验性的 API* async_hooks
+
+
+// 並行 / 部分事務
+
+// 你可以在一系列查詢中執行併發事務，或者將某些事物從任何事務中排除。使用 {transaction: } 選項來控制查詢所屬的事務
