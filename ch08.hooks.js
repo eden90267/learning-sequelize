@@ -209,9 +209,84 @@ User.create({
  afterBulkDestroy(options)
  */
 
-// 如果要為每個單獨的紀錄觸發 hook，連同批量 hook，您可以將 personalHooks: true 傳遞給調用
+// 如果要為每個單獨的紀錄觸發 hook，連同批量 hook，您可以將 personalHooks:true 傳遞給調用
+
+const Model = sequelize.define(/**/);
+
 Model.destroy({ where: {accessLevel: 0}, individualHooks: true});
 // 将选择要删除的所有记录，并在每个实例删除之前 + 之后触发
 
 Model.update({username: 'Toni'}, { where: {accessLevel: 0}, individualHooks: true});
 // 将选择要更新的所有记录，并在每个实例更新之前 + 之后触发
+
+// Hook 方法的 options 參數將是提供給相應方法或其克隆和擴充版本的第二個參數
+
+Model.beforeBulkCreate((records, {fields}) => {
+  // records = 第一个参数发送到 .bulkCreate
+  // fields = 第二个参数欄位之一发送到 .bulkCreate
+});
+Model.bulkCreate([
+    {username: 'Toni'}, // 部分记录参数
+    {username: 'Tobi'} // 部分记录参数
+  ], {fields: ['username']} // 选项参数
+);
+
+Model.beforeBulkUpdate(({attributes, where}) => {
+  // where - 第二个参数的克隆的欄位之一发送到 .update
+  // attributes - .update 的第二个参数的克隆的欄位之一被用于扩展
+});
+
+Model.update({geneder: 'Male'} /* 屬性參數 */, {where: {username: 'Tom'}}); /* where 參數 */
+
+Model.beforeBulkDestroy(({where, individualHooks}) => {
+  // individualHooks - 第二個參數被擴展的克隆被覆蓋的默認值發送到 Model.destroy
+  // where - 第二个参数的克隆的字段之一发送到 Model.destroy
+});
+Model.destroy({ where: {username: 'Tom'}} /*where 参数*/)
+
+// 如果用 updates.OnDuplicate 參數使用 Model.bulkCreate(...)，那麼 hook 中對 updatesOnDuplicate 陣列中沒有給出的欄位所做的更改將不會被持久保留到資料庫。但是，如果這是您想要的，則可以更改 hook 中的 updatesOnDuplicate 選項。
+
+// 使用 updatesOnDuplicate 選項批量更新現有用戶
+User.bulkCreate([
+  {id: 1, isMember: true},
+  {id: 2, isMember: false}
+], {
+  updatesOnDuplicate: ['isMember']
+});
+
+User.beforeBulkCreate((users, options) => {
+  for (const user of users) {
+    if (user.isMember) {
+      user.memberSince = new Date();
+    }
+  }
+
+  options.updateOnDuplicate.push('memberSince');
+});
+
+
+// 關聯
+
+// 在大多数情况下，hook 对于相关联的实例而言将是一样的，除了几件事情之外。
+
+// 1. 当使用 add/set 函数时，将运行 beforeUpdate/afterUpdate hook。
+// 2. 调用 beforeDestroy/afterDestroy hook 的唯一方法是与 onDelete: cascade 和参数 hooks: true 相关联。 例如：
+
+const Projects = sequelize.define('projects', {
+  title: DataTypes.STRING
+});
+
+const Tasks = sequelize.define('tasks', {
+  title: DataTypes.STRING
+});
+
+Projects.hasMany(Tasks, {onDelete: 'cascade', hooks: true});
+Task.belongsTo(Projects);
+
+// 該代碼將在 Tasks 表上運行 beforeDestroy / afterDestroy。默認情況下，Sequelize 会尝试尽可能优化您的查询。 在删除时调用级联，Sequelize 将简单地执行一个
+
+// DELETE FROM `table` WHERE associatedIdentifier = associatedIdentifier.primaryKey
+
+// 然而，添加 hooks: true 会明确告诉 Sequelize，优化不是你所关心的，并且会在关联的对象上执行一个 SELECT，并逐个删除每个实例，以便能够使用正确的参数调用 hook。
+
+// 如果你的關聯類型為 n:m，則在使用 remove 調用時，您可能有興趣在直通模型上觸發 hook。在內部，sequelize 使用 Model.destroy，致使在每個實例上調用的 bulkDestroy 而不是 before / afterDestroy hook。
