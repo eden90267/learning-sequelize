@@ -290,3 +290,42 @@ Task.belongsTo(Projects);
 // 然而，添加 hooks: true 会明确告诉 Sequelize，优化不是你所关心的，并且会在关联的对象上执行一个 SELECT，并逐个删除每个实例，以便能够使用正确的参数调用 hook。
 
 // 如果你的關聯類型為 n:m，則在使用 remove 調用時，您可能有興趣在直通模型上觸發 hook。在內部，sequelize 使用 Model.destroy，致使在每個實例上調用的 bulkDestroy 而不是 before / afterDestroy hook。
+
+// 這可以透過將 {individualHooks: true} 傳遞給 remove 調用來簡單地解決，從而導致每個 hook 都透過實例對象被刪除。
+
+
+// 關於事務的注意事項
+
+// 请注意，Sequelize 中的许多模型操作允许您在方法的 options 参数中指定事务。 如果在原始调用中 指定 了一个事务，它将出现在传递给 hook 函数的 options 参数中。例如：
+
+// 這裏我們使用異步 hook 的 promise 風格，而不是回調：
+User.hook('afterCreate', (user, options) => {
+  // 'tranasction' 將在 options.transaction 中可用
+
+  // 此操作將成為與原始 User.create 調用相同的事務的一部分
+  return User.update({
+    mood: 'sad'
+  }, {
+    where: {
+      id: user.id
+    },
+    transaction: options.transaction
+  });
+});
+
+sequelize.transaction(transaction => {
+  User.create({
+    username: 'someguy',
+    mood: 'happy',
+    transaction
+  });
+});
+
+// 如果我们在上述代码中的 User.update 调用中未包含事务选项，则不会发生任何更改，因为在已提交挂起的事务之前，我们新创建的用户不存在于数据库中。
+
+
+// 內部事務
+
+// 要認識到 sequelize 可能會在某些操作 (如 Model.findOrCreate) 內部使用事務是非常重要的。如果你的 hook 函數執行依赖对象在資料库中存在的读取或写入操作，或者修改对象的存储值，就像上一节中的例子一样，你应该总是指定 { transaction: options.transaction }。
+
+// 如果在处理操作的过程中已经调用了该 hook ，则这将确保您的依赖读/写是同一事务的一部分。 如果 hook 没有被处理，你只需要指定{ transaction: null } 并且可以预期默认行为。
